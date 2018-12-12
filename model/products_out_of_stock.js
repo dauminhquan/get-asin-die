@@ -10,7 +10,7 @@ let Schema = new mongoose.Schema({
         type: Date,
         default: Date.now
     },
-    root_url: {
+    keywords: {
         type:String,
         required: true
     },

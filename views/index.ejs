@@ -32,21 +32,17 @@
 </head>
 
 <body>
-    <div style="text-align: left;margin-top: 15px;margin-left: 50px";>
-        <a href="/manage" style="color: #ffffff;text-decoration: underline">Manage</a>
-    </div>
+
     <div class="main-agile content">
         <!-- title name-->
-        <h1>Find Asin</h1>
-        <p class="para-w3ls process" id="processing">Processing...</p>
-        <%if(typeof success !== 'undefined'){%><p class="para-w3ls" id="success">Thành công</p><%}%>
+        <h1>Tải dữ liệu</h1>
         <div class="subscribe wthree">
-            <h2>Tìm kiếm sản phẩm</h2>
+            <h2>Tải về dữ liệu</h2>
             <div class="contact-form">
-                <form id="form-search">
+                <form id="form-search" method="post" action="/get-asin">
                     <div id="div-input-search">
-                        <input type="text" placeholder="Nhập Url tìm kiếm" id="url-find" required>
-                        <input type="submit" id="search" value="Tìm kiếm">
+                        <input type="text" placeholder="Nhập từ khóa" name="keyword" required>
+                        <input type="submit" id="search" value="Tải file">
                         <div class="clear"></div>
                     </div>
                 </form>
@@ -65,64 +61,7 @@
     <script src="/js/moment-timezone-with-data.js"></script>
     <script src="/js/timer.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.1.1/socket.io.js"></script>
-    <script>
-        function makeid() {
-            var text = "";
-            var possible = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
 
-            for (var i = 0; i < 64; i++)
-                text += possible.charAt(Math.floor(Math.random() * possible.length));
-            return text;
-        }
-        setTimeout(function () {
-            $("#success").slideUp('slow')
-        },5000)
-        setInterval(function () {
-            let strProcessing = $("#processing").text()
-            strProcessing = strProcessing.replace('Processing','')
-            if(strProcessing.length == 10)
-            {
-                strProcessing = 'Processing.'
-            }else{
-                strProcessing ='Processing'+strProcessing+'.'
-            }
-            $("#processing").text(strProcessing)
-
-        },500)
-    </script>
-    <script>
-        $("#form-search").submit(function(event){
-            $("#processing").css('display', 'block');
-            event.preventDefault()
-            let key = makeid()
-            const socket = io();
-            socket.on(key,data => {
-                $("#processing").css('display', 'none');
-                alert('Đã hoàn thành')
-                window.open('/get-asin?root_url='+$("#url-find").val(),'_blank')
-            })
-            let minReview = $("#min-review").val()
-            let maxReview = $("#max-review").val()
-            let depth = $("#depth").val()
-            $.ajax({
-                type: "POST",
-                url: '/find-product',
-                data: {
-                    url: $("#url-find").val(),
-                    key: key,
-                    minReview: minReview,
-                    maxReview: maxReview,
-                    depth: depth
-                },
-                success: (data) => {
-                    console.log(data)
-                },
-                error: (err) => {
-                    console.log(err)
-                }
-            })
-        })
-    </script>
 </body>
 
 </html>

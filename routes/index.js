@@ -9,149 +9,51 @@ var  RootUrl = require('../model/root_url')
 const fs = require("fs");
 const csv = require('fast-csv')
 /* GET home page. */
-router.get('/', function(req, res, next) {
-    /*axios.get('https://www.amazon.com/s/gp/search?rh=n%3A1055398%2Cn%3A510240%2Cn%3A3737831%2Ck%3Aportable+garment+steamer%2Cp_n_availability%3A1248816011&keywords=portable+garment+steamer&page=8').then(data=>{
-      return  res.send(data.data)
-    }).catch(err => {
-        console.log(err)
-        return res.send(err.response.data)
-        console.log('Bi chan')
-    })*/
-    return res.render('index');
-});
-router.post('/find-product',function(req,res,next) {
-  let url = req.body.url;
-  let key = req.body.key
-    /*RootUrl.findOne({
-        root_url: encodeURI(url)
-    },function(err,data){
-        if(err){
-            console.log(err)
-        }
-        console.log(data)
-        if(data == null)
+router.get('/',(req,res,next) => {
+    res.render('index')
+})
+
+router.post('/put-asin',function (req,res,next) {
+    let data = req.body.data
+    if(data.length > 0)
+    {
+        for(let i = 0 ; i < data.length ; i++)
         {
-            let root_url = new RootUrl({
-            root_url: url
+            let product = new Product({
+                asin : data[i].asin,
+                url_found: data[i].url_found,
+                url_product: data[i].url_product,
+                keyword: data[i].keyword
             })
-            root_url.save((error,doc) => {
-                if(error)
+            product.save(function (err) {
+                if(err)
                 {
-                    console.log('Url da ton tai')
+                    console.log('that bai')
                 }
             })
         }
-    })*/
-    // console.log(encodeURI(url));
-    getProducts(url,url,res.io,key)
+    }
     return res.json({
-        'message' : "ok"
-    })
-})
-router.get('/manage',function (req,res,next) {
-    RootUrl.find({},function(err,docs){
-        if(err)
-        {
-           return res.status(500).json({
-                message: "error"
-            })
-        }
-        let root_urls = []
-        docs.forEach(doc => {
-            root_urls.push(doc.root_url)
-
-        })
-        return res.render('manage',{
-            root_urls: root_urls
-        })
+        status: 0
     })
 
 })
-router.post('/manage/upload-csv',function (req,res,next) {
-    if (req.files) {
-        let file = req.files.csvFile
-        let fileName = new Date().getMilliseconds().toString()
-        file.mv('./'+fileName,function(err){
-            const stream = fs.createReadStream('./'+fileName)
-            const streamCsv = csv({
-                headers: true,
-                delimiter:',',
-                quote: '"'
-            }).on('data',data => {
-                Product.findOne({
-                    asin: data.asin
-                },(err,product) => {
-                    if(err || product == null)
-                    {
-                        console.log(err)
-                    }
-                    else{
-                        product.reject = true
-                        product.save((error,document) => {
-                            if(error)
-                            {
-                                console.log(error)
-                            }
-                        })
-                    }
-                })
-            }).on('end',() => {
-                fs.unlink('./'+fileName,function (err) {
-                    if(err)
-                    {
-                        console.log(err)
-                        return res.status(500).json(err)
-                    }
-                    let root_url = req.body.root_url
-                    if(root_url!= undefined)
-                    {
-                        Product.find({},function(err,products){
-                            if(err)
-                            {
-                                return res.status(500).json({
-                                    message: "error"
-                                })
-                            }
-                            let root_urls = []
-                            let product_find = []
-                            products.forEach(product => {
-                                if(!root_urls.includes(product.root_url))
-                                {
-                                    root_urls.push(product.root_url)
-                                }
-                                if(product.root_url == root_url)
-                                {
-                                    product_find.push(product)
-                                }
 
-                            })
-                            return res.render('manage_post',{
-                                root_urls: root_urls,
-                                product_find: product_find,
-                                root_url: root_url
-                            })
-                        })
-                    }
-                    else{
-                        return res.render('index',{
-                            success: true
-                        })
-                    }
-                })
-            }).on('error',(err) => {
-                return res.status(500).json(err)
-            })
-            stream.pipe(streamCsv)
-        })
-    }
-    else{
-        res.status(406).json({
-            message: 'error'
-        })
-    }
+
+router.get('/delete',function(req,res,next){
+    Product.remove({},function(err){
+        console.log(err)
+    })
+    res.send('ok')
 })
-router.get('/get-asin',function (req,res,next) {
-    let root_url = req.query.root_url
+
+router.post('/get-asin',function (req,res,next) {
+    if(req.body.keyword == undefined)
+    {
+        return res.status(503).json({
+            message: 'Khong co tu khoa'
+        })
+    }
     const styles = {
         headerDark: {
             fill: {
@@ -194,11 +96,6 @@ router.get('/get-asin',function (req,res,next) {
             headerStyle: styles.cellGreen, // <- Header style
             width: 120 // <- width in pixels
         },
-        root_url: {
-            displayName: 'Url find', // <- Here you specify the column header
-            headerStyle: styles.cellGreen, // <- Header style
-            width: 120 // <- width in pixels
-        },
         url_found: {
             displayName: 'Url found', // <- Here you specify the column header
             headerStyle: styles.cellGreen, // <- Header style
@@ -211,12 +108,17 @@ router.get('/get-asin',function (req,res,next) {
         }
     }
 
-    Product.find({ root_url: root_url}, function (error, docs) {
+    Product.find({keyword: req.body.keyword}, function (error, docs) {
         if(error)
         {
             return res.status(500).json(error)
         }
-        console.log(docs.length)
+        if(docs.length == 0)
+        {
+            return res.status(503).json({
+                message: 'Tu khoa khong ton tai'
+            })
+        }
         const report = excel.buildExport(
             [ // <- Notice that this is an array. Pass multiple sheets to create multi sheet report
                 {
@@ -231,6 +133,12 @@ router.get('/get-asin',function (req,res,next) {
         let currentTime = date.getFullYear()+'_'+(date.getMonth() + 1) + '_'+date.getDate()+'_'+date.getHours()+'_'+date.getMinutes()+
             '_'+date.getSeconds()
         res.attachment('report_'+currentTime+'.xlsx'); // This is sails.js specific (in general you need to set headers)
+        Product.remove({keyword: req.body.keyword},function (err) {
+            if(err )
+            {
+                console.log(err)
+            }
+        })
         return res.send(report);
         // return res.json(docs)
     });
@@ -258,17 +166,12 @@ router.get('/get-asin',function (req,res,next) {
 })*/
 async function getProducts(url,root_url,socket,key)
 {
-    await axios.get(url,{
-        headers:{
-            Accept: 'text/html'
-        }
-    }).then( async response => {
-        console.log(response.data)
+    console.log('Dang tim sp')
+    await axios.get(url).then( async response => {
         const { window } = new JSDOM(response.data);
         const $ = require('jquery')(window);
-        let products = $('.s-result-item:contains(Currently unavailable)')
-    // :contains(Currently unavailable)
-        console.log(products.length)
+        let products = $('.s-result-item.celwidget:contains(Currently unavailable)')
+
         for(let i=0;i<products.length;i++)
         {
             let product = new Product({
@@ -280,25 +183,35 @@ async function getProducts(url,root_url,socket,key)
             product.save(function(err){
                 if(err)
                 {
-                    console.log('Loi luu san pham')
+
+                    console.log('Loi luu san pham - Trung Asin')
                 }
             })
         }
         let nextLink = $('#pagnNextLink').attr('href')
+
         if(nextLink != undefined)
         {
-                await timeout(5000)
-                getUrl(nextLink,root_url,socket,key)
+            if(!nextLink.includes('amazon.com'))
+            {
+                nextLink = 'https://www.amazon.com'+nextLink
+            }
+            await timeout(5000)
+            getProducts(nextLink,root_url,socket,key)
         }
         else{
+            console.log('done')
             socket.emit(key,{
                 message: 'done',
                 root_url: url
             })
         }
     }).catch(err => {
-        console.log(err)
         console.log('bị chặn')
+        socket.emit(key,{
+            message: 'done',
+            root_url: url
+        })
     })
 }
 async function findProduct(url,socket,key){
